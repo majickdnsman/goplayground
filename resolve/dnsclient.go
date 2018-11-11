@@ -64,7 +64,7 @@ func reverseaddr(addr string) (arpa string, err error) {
 
 // Find answer for name in dns message.
 // On return, if err == nil, addrs != nil.
-func answer(name, server string, dns *dnsMsg, qtype uint16) (cname string, addrs []dnsRR, err error) {
+func answer(name, server string, dns *dnsMsg, qtype uint16) (cnames string, addrs []dnsRR, err error) {
 	addrs = make([]dnsRR, 0, len(dns.answer))
 
 	if dns.rcode == dnsRcodeNameError && dns.recursion_available {
@@ -102,6 +102,7 @@ Cname:
 				case dnsTypeCNAME:
 					// redirect to cname
 					name = rr.(*dnsRR_CNAME).Cname
+                    cnames = cnames + " " + name
 					continue Cname
 				}
 			}
@@ -109,7 +110,7 @@ Cname:
 		if len(addrs) == 0 {
 			return "", nil, &DNSError{Err: noSuchHost, Name: name, Server: server}
 		}
-		return name, addrs, nil
+		return cnames, addrs, nil
 	}
 
 	return "", nil, &DNSError{Err: "too many redirects", Name: name, Server: server}

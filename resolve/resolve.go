@@ -48,6 +48,7 @@ var packetsPerSecond int
 var retryTime string
 var verbose bool
 var ipv6 bool
+var cname bool
 
 func init() {
 	flag.StringVar(&dnsServer, "server", "8.8.8.8:53",
@@ -62,6 +63,8 @@ func init() {
 		"Verbose logging")
 	flag.BoolVar(&ipv6, "6", false,
 		"Ipv6 - ask for AAAA, not A")
+    flag.BoolVar(&cname, "cname", false,
+        "CNAME - ask for CNAME, not A")
 }
 
 func main() {
@@ -143,6 +146,7 @@ type domainAnswer struct {
 	id     uint16
 	domain string
 	ips    []net.IP
+    cname  string
 }
 
 func do_map_guard(domains <-chan string,
@@ -216,9 +220,14 @@ func do_map_guard(domains <-chan string,
 				}
 				sort.Sort(sort.StringSlice(s))
 
+                var ip_string = strings.Join(s, " ")
+                if da.cname != "" {
+                    ip_string = ip_string + "," + da.cname
+                }
+
 				// without trailing dot
 				domain := dr.domain[:len(dr.domain)-1]
-				fmt.Printf("%s, %s\n", domain, strings.Join(s, " "))
+				fmt.Printf("%s, %s\n", domain, ip_string)
 
 				sumTries += dr.resend
 				domainCount += 1
@@ -281,7 +290,7 @@ func do_receive(c net.Conn, resolved chan<- *domainAnswer) {
 		} else {
 			t = dnsTypeAAAA
 		}
-		domain, id, ips := unpackDns(buf[:n], t)
-		resolved <- &domainAnswer{id, domain, ips}
+		domain, id, ips, cnames := unpackDns(buf[:n], t)
+		resolved <- &domainAnswer{id, domain, ips, cnames}
 	}
 }
